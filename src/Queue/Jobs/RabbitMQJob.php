@@ -55,6 +55,8 @@ class RabbitMQJob extends Job implements JobContract
             [$class, $method] = JobName::parse($payload['job']);
 
             with($this->instance = $this->resolve($class))->{$method}($this, $payload['data']);
+    
+            $this->consumer->acknowledge($this->message);
         } catch (Exception $exception) {
             if (
                 $this->causedByDeadlock($exception) ||

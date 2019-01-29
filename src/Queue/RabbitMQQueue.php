@@ -58,7 +58,11 @@ class RabbitMQQueue extends Queue implements QueueContract
     /** {@inheritdoc} */
     public function push($job, $data = '', $queue = null)
     {
-        return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, []);
+        try {
+            return $this->pushRaw( $this->createPayload( $job, $queue, $data ), $queue, [] );
+        } catch (\Exception $e) {
+            return Queue::connection('queue_fallback')->push($job, $data, $queue);
+        }
     }
 
     /** {@inheritdoc} */
@@ -107,7 +111,12 @@ class RabbitMQQueue extends Queue implements QueueContract
     /** {@inheritdoc} */
     public function later($delay, $job, $data = '', $queue = null)
     {
-        return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, ['delay' => $this->secondsUntil($delay)]);
+        try {
+            return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, ['delay' => $this->secondsUntil($delay)]);
+        } catch ( \Exception $e) {
+            return Queue::connection('queue_fallback')->later($delay, $job, $data, $queue);
+        }
+        
     }
 
     /**
@@ -122,10 +131,15 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     public function release($delay, $job, $data, $queue, $attempts = 0)
     {
-        return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, [
-            'delay' => $this->secondsUntil($delay),
-            'attempts' => $attempts,
-        ]);
+        try {
+            return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, [
+                'delay' => $this->secondsUntil($delay),
+                'attempts' => $attempts,
+            ]);
+        } catch (\Exception $e) {
+            return Queue::connection('queue_fallback')->release($delay, $job, $data, $queue, $attempts);
+        }
+        
     }
 
     /** {@inheritdoc} */
